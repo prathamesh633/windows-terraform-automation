@@ -1,5 +1,5 @@
 provider "aws" {
-  region = "ap-south-1"
+  region  = "ap-south-1"
 }
 
 # 1. Create a VPC
@@ -11,7 +11,7 @@ resource "aws_vpc" "main" {
 resource "aws_subnet" "main" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = "10.0.1.0/24"
-  availability_zone       = "us-east-1a"
+  availability_zone       = "ap-south-1a"
   map_public_ip_on_launch = true
 }
 
@@ -81,16 +81,29 @@ resource "random_password" "windows" {
   override_special = "!@#$%&*()-_=+[]{}<>:?"
 }
 
+data "aws_ami" "windows" {
+  most_recent = true
+  owners      = ["amazon"]
+
+  filter {
+    name   = "name"
+    values = ["Windows_Server-2022-English-Full-Base-*"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
+
 # 6. Windows EC2 Instance with user creation via user_data
 resource "aws_instance" "windows" {
-  ami                         = "ami-089e0600a8bb6d176" # Windows Server 2022 Base 
-  instance_type               = "t3.medium" # Windows typically needs more resources
-  subnet_id                   = aws_subnet.main.id
-  vpc_security_group_ids      = [aws_security_group.windows.id]
-  associate_public_ip_address = true
-
-  # Use the generated password
-  get_password_data = true
+  ami                    = data.aws_ami.windows.id
+  instance_type          = "t3.medium"
+  subnet_id              = aws_subnet.main.id
+  vpc_security_group_ids = [aws_security_group.windows.id]
+  key_name               = "office-key"  # Replace with your existing key pair name
+  get_password_data      = true
 
   user_data = <<-EOF
     <powershell>
@@ -122,23 +135,9 @@ resource "aws_instance" "windows" {
   tags = {
     Name = "Windows-Terraform-EC2"
   }
-}
 
-# 7. Output the connection information
-output "windows_instance_ip" {
-  value = aws_instance.windows.public_ip
-}
-
-output "rdp_connection_command" {
-  value = "mstsc /v:${aws_instance.windows.public_ip}"
-}
-
-output "administrator_password" {
-  value     = aws_instance.windows.password_data
-  sensitive = true
-}
-
-output "user1_password" {
-  value     = random_password.windows.result
-  sensitive = true
+  timeouts {
+    create = "10m"
+    delete = "10m"
+  }
 }
