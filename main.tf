@@ -1,5 +1,5 @@
 provider "aws" {
-  region  = "ap-south-1"
+  region = var.aws_region
 }
 
 # 1. Create a VPC
@@ -36,8 +36,13 @@ resource "aws_route_table_association" "a" {
 
 # 4. Security group allowing RDP and HTTP
 resource "aws_security_group" "windows" {
-  name        = "allow_rdp_http"
+  name        = "${var.name_prefix}-sg"
+  description = "Security group for Windows instance"
   vpc_id      = aws_vpc.main.id
+  
+  tags = {
+    Name = "${var.name_prefix}-sg"
+  }
 
   ingress {
     from_port   = 3389
@@ -70,9 +75,11 @@ resource "aws_security_group" "windows" {
 
 # 5. Generate password for Windows instance
 resource "aws_ssm_parameter" "windows_password" {
-  name  = "/ec2/windows/password"
-  type  = "SecureString"
-  value = random_password.windows.result
+  name        = "/ec2/windows/password"
+  type        = "SecureString"
+  value       = random_password.windows.result
+  description = "Password for the Windows EC2 instance"
+  overwrite   = true  # This allows updating the parameter if it already exists
 }
 
 resource "random_password" "windows" {
@@ -99,17 +106,17 @@ data "aws_ami" "windows" {
 # 6. Windows EC2 Instance with user creation via user_data
 resource "aws_instance" "windows" {
   ami                    = data.aws_ami.windows.id
-  instance_type          = "t3.medium"
+  instance_type          = var.instance_type
   subnet_id              = aws_subnet.main.id
   vpc_security_group_ids = [aws_security_group.windows.id]
-  key_name               = "office-key"  # Replace with your existing key pair name
+  key_name               = "office-key"
   get_password_data      = true
 
   user_data = <<-EOF
     <powershell>
     # Create a new standard user
     $username = "user1"
-    $password = "${random_password.windows.result}"
+    $password = "${var.windows_user_password}"
     
     # Create the user
     net user $username $password /add /y
@@ -133,7 +140,7 @@ resource "aws_instance" "windows" {
   EOF
 
   tags = {
-    Name = "Windows-Terraform-EC2"
+    Name = "${var.name_prefix}-ec2"
   }
 
   timeouts {
