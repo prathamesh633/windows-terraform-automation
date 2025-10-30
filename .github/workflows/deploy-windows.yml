@@ -45,14 +45,14 @@ jobs:
           terraform validate -no-color
 
       # Generate Terraform plan
-      - name: Terraform Plan
-        id: plan
-        run: |
-          terraform plan \
-            -var="windows_user_password=${{ secrets.WINDOWS_USER_PASSWORD }}" \
-            -input=false \
-            -out=terraform.tfplan
-        continue-on-error: true
+      # - name: Terraform Plan
+      #   id: plan
+      #   run: |
+      #     terraform plan \
+      #       -var="windows_user_password=${{ secrets.WINDOWS_USER_PASSWORD }}" \
+      #       -input=false \
+      #       -out=terraform.tfplan
+      #   continue-on-error: true
 
       # Apply Terraform plan
       - name: Terraform Apply
