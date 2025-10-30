@@ -1,59 +1,69 @@
-name: "Terraform AWS Windows Deploy"
+name: Terraform AWS Windows Deploy
 
 on:
   workflow_dispatch:
 
+env:
+  TF_VERSION: '1.5.0'
+  AWS_REGION: 'ap-south-1'
+
 jobs:
-  deploy:
+  terraform:
+    name: 'Terraform'
     runs-on: ubuntu-latest
+    environment: production
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v3
 
-      # Securely configure AWS credentials from GitHub Secrets
-      - name: Configure AWS credentials
+      # Configure AWS credentials
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
 
+      # Setup Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
-          terraform_version: '1.5.0'
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
 
-      # Create terraform.tfvars from workflow/environment variables
-      - name: Generate terraform.tfvars from secrets
+      # Initialize Terraform
+      - name: Terraform Init
+        id: init
         run: |
-          cat <<EOF > terraform.tfvars
-          windows_admin_password = "${{ secrets.WINDOWS_ADMIN_PASSWORD }}"
-          name_prefix = "gh-actions-windows"
-          instance_type = "t3.medium"
-          # Add other variables here if needed
-          EOF
+          terraform init -input=false
 
-      # Export sensitive Terraform variables
-      - name: Export TF_VAR secrets
+      # Validate Terraform files
+      - name: Terraform Validate
+        id: validate
         run: |
-          echo "TF_VAR_windows_user_password=${{ secrets.WINDOWS_USER_PASSWORD }}" >> $GITHUB_ENV
+          terraform validate -no-color
 
-      - name: Terraform init
-        run: terraform init -input=false
+      # Generate Terraform plan
+      - name: Terraform Plan
+        id: plan
+        run: |
+          terraform plan \
+            -var="windows_user_password=${{ secrets.WINDOWS_USER_PASSWORD }}" \
+            -input=false \
+            -out=terraform.tfplan
+        continue-on-error: true
 
-      - name: Terraform validate
-        run: terraform validate
+      # Apply Terraform plan
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          terraform apply \
+            -auto-approve \
+            -var="windows_user_password=${{ secrets.WINDOWS_USER_PASSWORD }}"
 
-      - name: Terraform plan
-        run: terraform plan -var="windows_user_password=${{ secrets.WINDOWS_USER_PASSWORD }}"
-
-      - name: Terraform apply
-        run: terraform apply -auto-approve -var="windows_user_password=${{ secrets.WINDOWS_USER_PASSWORD }}"
-
-      # Output Windows connection information
-      - name: Get Windows connection details
+      # Output Terraform outputs
+      - name: Terraform Outputs
         run: |
           echo "Windows Instance IP: $(terraform output -raw windows_instance_ip)"
           echo "RDP Command: $(terraform output -raw rdp_connection_command)"
-        if: always()
