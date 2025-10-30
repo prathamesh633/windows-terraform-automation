@@ -1,18 +1,26 @@
-# 7. Output the connection information
 output "windows_instance_ip" {
-  value = aws_instance.windows.public_ip
+  description = "Public IP address of the Windows instance"
+  value       = aws_instance.windows.public_ip
 }
 
 output "rdp_connection_command" {
-  value = "mstsc /v:${aws_instance.windows.public_ip}"
+  description = "Command to connect to the Windows instance via RDP"
+  value       = "mstsc /v:${aws_instance.windows.public_ip}"
 }
 
-output "administrator_password" {
-  value     = aws_instance.windows.password_data
-  sensitive = true
+output "instance_id" {
+  description = "ID of the EC2 instance"
+  value       = aws_instance.windows.id
 }
 
-output "user1_password" {
-  value     = random_password.windows.result
-  sensitive = true
+output "instance_public_ip" {
+  description = "Public IP of the EC2 instance"
+  value       = aws_instance.windows.public_ip
+}
+
+# Output the Windows password (if get_password_data is true)
+output "windows_password" {
+  description = "Windows administrator password"
+  value       = aws_instance.windows.password_data
+  sensitive   = true
 }
