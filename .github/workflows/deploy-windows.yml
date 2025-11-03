@@ -44,26 +44,17 @@ jobs:
         run: |
           terraform validate -no-color
 
-      # Generate Terraform plan
-      # - name: Terraform Plan
-      #   id: plan
-      #   run: |
-      #     terraform plan \
-      #       -var="windows_user_password=${{ secrets.WINDOWS_USER_PASSWORD }}" \
-      #       -input=false \
-      #       -out=terraform.tfplan
-      #   continue-on-error: true
-
-      # Apply Terraform plan
+      # Apply Terraform
       - name: Terraform Apply
-        # if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: |
-          terraform apply \
-            -auto-approve \
-            -var="windows_user_password=${{ secrets.WINDOWS_USER_PASSWORD }}"
+          terraform apply -auto-approve
 
       # Output Terraform outputs
       - name: Terraform Outputs
         run: |
           echo "Windows Instance IP: $(terraform output -raw windows_instance_ip)"
           echo "RDP Command: $(terraform output -raw rdp_connection_command)"
+          echo "SSM Parameter Name: $(terraform output -raw ssm_parameter_name)"
+          echo "=== IMPORTANT ==="
+          echo "Retrieve the Windows password using:"
+          echo "aws ssm get-parameter --name $(terraform output -raw ssm_parameter_name) --with-decryption --query Parameter.Value --output text"
