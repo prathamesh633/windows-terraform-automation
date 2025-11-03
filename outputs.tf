@@ -19,8 +19,8 @@ output "instance_public_ip" {
 }
 
 # Output the Windows password (if get_password_data is true)
-output "windows_password" {
-  description = "Windows administrator password"
-  value       = aws_instance.windows.password_data
-  sensitive   = true
-}
+# output "windows_password" {
+#   description = "Windows administrator password"
+#   value       = aws_instance.windows.password_data
+#   sensitive   = true
+# }
