@@ -21,4 +21,6 @@ variable "windows_user_password" {
   description = "Password for the Windows user"
   type        = string
   sensitive   = true
+  default     = "TempPassword123!"  # Add this line
+
 }
