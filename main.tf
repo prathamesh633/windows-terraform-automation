@@ -1,5 +1,6 @@
 provider "aws" {
   region = var.aws_region
+
 }
 
 # 1. Create a VPC
@@ -74,18 +75,18 @@ resource "aws_security_group" "windows" {
 }
 
 # 5. Generate password for Windows instance
+resource "random_password" "windows" {
+  length           = 16
+  special          = true
+  override_special = "!@#$%&*()-_=+[]{}<>:?"
+}
+
 resource "aws_ssm_parameter" "windows_password" {
   name        = "/ec2/windows/password"
   type        = "SecureString"
   value       = random_password.windows.result
   description = "Password for the Windows EC2 instance"
-  overwrite   = true  # This allows updating the parameter if it already exists
-}
-
-resource "random_password" "windows" {
-  length           = 16
-  special          = true
-  override_special = "!@#$%&*()-_=+[]{}<>:?"
+  overwrite   = true
 }
 
 data "aws_ami" "windows" {
@@ -116,7 +117,7 @@ resource "aws_instance" "windows" {
     <powershell>
     # Create a new standard user
     $username = "user1"
-    $password = "${var.windows_user_password}"
+    $password = "${random_password.windows.result}"
     
     # Create the user
     net user $username $password /add /y
@@ -147,4 +148,16 @@ resource "aws_instance" "windows" {
     create = "10m"
     delete = "10m"
   }
+}
+
+# Output the generated password
+output "windows_password" {
+  description = "Auto-generated password for Windows user"
+  value       = random_password.windows.result
+  sensitive   = true
+}
+
+output "ssm_parameter_name" {
+  description = "SSM parameter name where password is stored"
+  value       = aws_ssm_parameter.windows_password.name
 }
