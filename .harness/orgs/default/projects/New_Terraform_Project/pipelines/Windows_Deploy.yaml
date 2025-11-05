@@ -1,0 +1,40 @@
+pipeline:
+  name: Windows Deploy
+  identifier: Windows_Deploy
+  projectIdentifier: New_Terraform_Project
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: Terraform deploy
+        identifier: Terraform_deploy
+        description: ""
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  type: TerraformApply
+                  name: TerraformApply_1
+                  identifier: TerraformApply_1
+                  spec:
+                    provisionerIdentifier: Windows_EC2
+                    configuration:
+                      type: Inline
+                      spec:
+                        configFiles:
+                          store:
+                            spec:
+                              connectorRef: GitHub_Windows_Connector
+                              gitFetchType: Branch
+                              branch: main
+                              folderPath: .
+                            type: Github
+                        providerCredential:
+                          type: Aws
+                          spec:
+                            connectorRef: AWS_connector
+                            region: ap-south-1
+                            roleArn: ""
+                  timeout: 10m
+        tags: {}
